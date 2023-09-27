@@ -1,87 +1,94 @@
-import os
-import pandas as pd
 import streamlit as st
 from googleapiclient.discovery import build
+import json
+import csv
 import re
+import urllib.parse
 
-# Initialize the YouTube Data API client
-API_KEY = "AIzaSyA2t7_3fcDsDA00drph9nRERsI-QPnXgrQ"
-youtube = build("youtube", "v3", developerKey=API_KEY)
+# Set up the API client
+api_key = "AIzaSyA2t7_3fcDsDA00drph9nRERsI-QPnXgrQ"  # Replace with your API key
+youtube = build('youtube', 'v3', developerKey=api_key)
 
-# Streamlit app title
-st.title("YouTube Data Extractor")
+# Function to get the channel ID from channel name
+def get_channel_id_from_name(channel_name):
+    # Perform the necessary API call here to get the channel ID
+    # Replace this with your own implementation
+    pass
 
-# Create a folder to save CSV files
-output_folder = "output_data"
-os.makedirs(output_folder, exist_ok=True)
+# Streamlit app
+st.title("YouTube Channel Data Extraction")
 
-# Input for YouTube URL
-youtube_url = st.text_input("Enter a YouTube URL:")
+# User input section
+channel_url = st.text_input("Enter the YouTube channel URL:")
+if channel_url:
+    # Extract the channel name from the URL
+    parsed_url = urllib.parse.urlparse(channel_url)
+    channel_name = parsed_url.path.split('@')[-1]  # Extract letters after '@'
 
-if st.button("Get Channel Data"):
-    if youtube_url:
-        # Extract channel ID from the URL
-        match = re.search(r"channel/([A-Za-z0-9_-]+)", youtube_url)
-        if match:
-            channel_id = match.group(1)
+    # Use the function to get the channel ID
+    channel_id = get_channel_id_from_name(channel_name)
 
-            # Create CSV file name based on channel ID
-            csv_filename = os.path.join(output_folder, f"{channel_id}_channel_data.csv")
+    if not channel_id:
+        st.error("Channel not found.")
+    else:
+        # Generate a URL-safe slug from the channel name
+        slug = re.sub(r'[^a-z0-9]+', '-', channel_name.lower()).strip('-')
 
-            # Fetch channel data
-            channel_request = youtube.channels().list(
-                part="snippet,statistics,status",
-                id=channel_id,
-            )
-            channel_response = channel_request.execute()
+        # Define the filename using the slug
+        filename = f'{slug}_analytics.csv'
 
-            if "items" in channel_response:
-                channel_data = channel_response["items"][0]
+        next_page_token = None
+        videos = []
 
-                # Extract channel data
-                channel_name = channel_data["snippet"]["title"]
-                channel_type = channel_data["snippet"]["customUrl"]
-                channel_views = channel_data["statistics"]["viewCount"]
-                channel_description = channel_data["snippet"]["description"]
-                channel_status = channel_data["status"]["privacyStatus"]
+        while True:
+            response = youtube.search().list(
+                part='snippet',
+                channelId=channel_id,
+                type='video',
+                maxResults=50,  # Adjust the number of results per page as needed
+                pageToken=next_page_token
+            ).execute()
 
-                # Create a DataFrame for channel data
-                channel_df = pd.DataFrame({
-                    "channel_name": [channel_name],
-                    "channel_type": [channel_type],
-                    "channel_views": [channel_views],
-                    "channel_description": [channel_description],
-                    "channel_status": [channel_status],
-                })
+            # Loop through the items in the API response and extract relevant information
+            for item in response['items']:
+                video_info = {
+                    'video_id': item['id']['videoId'],
+                    'title': item['snippet']['title'],
+                    'description': item['snippet']['description'],
+                    'published_at': item['snippet']['publishedAt']
+                }
 
-                # Save channel data to CSV
-                channel_df.to_csv(csv_filename, index=False)
+                # Additional request to get video statistics (likes, comments, view counts)
+                video_stats_response = youtube.videos().list(
+                    part='statistics',
+                    id=item['id']['videoId']
+                ).execute()
 
-                st.success(f"Channel data saved to {csv_filename}")
-        else:
-            st.error("No channel ID found in the provided URL.")
+                video_stats = video_stats_response['items'][0]['statistics']
+                video_info['likes'] = video_stats['likeCount']
 
-# Display the list of available CSV files
-csv_files = os.listdir(output_folder)
-csv_files = [f for f in csv_files if f.endswith("_channel_data.csv")]
+                # Check if 'commentCount' exists (may not exist if comments are restricted)
+                if 'commentCount' in video_stats:
+                    video_info['comments'] = video_stats['commentCount']
+                else:
+                    video_info['comments'] = 'Comments restricted'
 
-if csv_files:
-    st.subheader("Available Channel Data CSVs")
-    selected_csv = st.selectbox("Select a CSV:", csv_files)
+                video_info['views'] = video_stats['viewCount']
 
-    # Read and display the selected CSV
-    selected_csv_path = os.path.join(output_folder, selected_csv)
-    selected_data = pd.read_csv(selected_csv_path)
-    st.write(selected_data)
-else:
-    st.warning("No CSV files available.")
+                videos.append(video_info)
 
-# Information about how to use the app
-st.markdown(
-    """
-    **Instructions:**
-    1. Enter a valid YouTube URL in the input box above.
-    2. Click the 'Get Channel Data' button to fetch channel data and save it to a CSV file.
-    3. The saved CSV files can be selected from the dropdown list to view their contents.
-    """
-)
+            # Check if there are more pages of results
+            next_page_token = response.get('nextPageToken')
+            if not next_page_token:
+                break
+
+        # Save the video data to a CSV file with the generated filename
+        with open(filename, 'w', newline='', encoding='utf-8') as csv_file:
+            fieldnames = ['video_id', 'title', 'description', 'published_at', 'likes', 'comments', 'views']
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for video in videos:
+                writer.writerow(video)
+
+        st.success(f"Data saved to '{filename}'.")
