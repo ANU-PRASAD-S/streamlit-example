@@ -48,8 +48,8 @@ if channel_url:
                 maxResults=50,  # Adjust the number of results per page as needed
                 pageToken=next_page_token
             ).execute()
-
-            # Loop through the items in the API response and extract relevant information
+#########################################################################################
+             # Loop through the items in the API response and extract relevant information
             for item in response['items']:
                 video_info = {
                     'video_id': item['id']['videoId'],
@@ -66,22 +66,45 @@ if channel_url:
 
                 video_stats = video_stats_response['items'][0]['statistics']
                 video_info['likes'] = video_stats['likeCount']
-
-                # Check if 'commentCount' exists (may not exist if comments are restricted)
-                if 'commentCount' in video_stats:
-                    video_info['comments'] = video_stats['commentCount']
-                else:
-                    video_info['comments'] = 'Comments restricted'
-
+                video_info['dislikes'] = video_stats['dislikeCount']
                 video_info['views'] = video_stats['viewCount']
+                video_info['favorite_count'] = video_stats.get('favoriteCount', 0)
+
+                # Additional request to get video content details (duration, caption status)
+                video_content_response = youtube.videos().list(
+                    part='contentDetails',
+                    id=item['id']['videoId']
+                ).execute()
+
+                content_details = video_content_response['items'][0]['contentDetails']
+                video_info['duration'] = content_details['duration']
+                video_info['caption_status'] = content_details.get('caption', 'Not available')
 
                 videos.append(video_info)
+
+                # Store video data in MongoDB
+                videos_collection.insert_one(video_info)
 
             # Check if there are more pages of results
             next_page_token = response.get('nextPageToken')
             if not next_page_token:
                 break
 
+        # Store channel data in MongoDB
+        channel_info = {
+            'channel_id': channel_id,
+            'channel_name': channel_name,
+            'channel_type': 'Your Channel Type Here',  # Replace with the actual channel type
+            'channel_views': 'Your Channel Views Here',  # Replace with the actual channel views
+            'channel_description': 'Your Channel Description Here',  # Replace with the actual description
+            'channel_status': 'Your Channel Status Here'  # Replace with the actual channel status
+        }
+        channels_collection.insert_one(channel_info)
+
+        st.success(f"Data saved to MongoDB.")
+
+#########################################################################################
+           
         # Save the video data to a CSV file with the generated filename
         with open(filename, 'w', newline='', encoding='utf-8') as csv_file:
             fieldnames = ['video_id', 'title', 'description', 'published_at', 'likes', 'comments', 'views']
@@ -92,3 +115,13 @@ if channel_url:
                 writer.writerow(video)
 
         st.success(f"Data saved to '{filename}'.")
+
+
+
+
+
+
+
+
+
+
