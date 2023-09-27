@@ -185,7 +185,7 @@ mongo_uri = "mongodb+srv://anuprasad4444:1234567890@cluster0.nw9dkpu.mongodb.net
 client = pymongo.MongoClient(mongo_uri)
 
 # Access a specific database
-db = client.my_database  # Replace 'my_database' with your database name
+db = client.anuprasad_guvi_project_1  # Replace 'my_database' with your database name
 
 # Define the JSON document containing your data
 data = {
