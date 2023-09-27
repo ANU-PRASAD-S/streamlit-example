@@ -4,6 +4,9 @@ import json
 import csv
 import re
 import urllib.parse
+import pandas as pd
+import sqlite3
+
 
 # Set up the API client
 api_key = "AIzaSyA2t7_3fcDsDA00drph9nRERsI-QPnXgrQ"  # Replace with your API key
@@ -114,6 +117,67 @@ if channel_url:
 
         st.success(f"Data saved to '{filename}'.")
 #########################################################################################
+
+# Function to execute SQL queries and display results
+def execute_query(query):
+    conn = sqlite3.connect("youtube_data.db")  # Replace with your database connection details
+    cursor = conn.cursor()
+    cursor.execute(query)
+    data = cursor.fetchall()
+    conn.close()
+    return data
+
+# Define a Streamlit element for SQL query section
+def sql_query_section():
+    # Dropdown to select SQL query
+    selected_query = st.selectbox("Select a query", [
+        "Names of all videos and their corresponding channels",
+        "Channels with the most number of videos",
+        "Top 10 most viewed videos and their respective channels",
+        "Number of comments on each video and their corresponding video names",
+        "Videos with the highest number of likes and their corresponding channel names",
+        "Total likes and dislikes for each video and their corresponding video names",
+        "Total views for each channel and their corresponding channel names",
+        "Channels that published videos in 2022",
+        "Average duration of videos in each channel",
+        "Videos with the highest number of comments and their corresponding channel names"
+    ])
+
+    # Execute SQL queries based on selection
+    if selected_query == "Names of all videos and their corresponding channels":
+        query_result = execute_query("SELECT Video.title, Channel.channel_name FROM Video JOIN Channel ON Video.channel_id = Channel.channel_id;")
+    elif selected_query == "Channels with the most number of videos":
+        query_result = execute_query("SELECT channel_name, COUNT(*) AS video_count FROM Channel GROUP BY channel_name ORDER BY video_count DESC LIMIT 1;")
+    elif selected_query == "Top 10 most viewed videos and their respective channels":
+        query_result = execute_query("SELECT Video.title, Channel.channel_name, Video.views FROM Video JOIN Channel ON Video.channel_id = Channel.channel_id ORDER BY Video.views DESC LIMIT 10;")
+    elif selected_query == "Number of comments on each video and their corresponding video names":
+        query_result = execute_query("SELECT Video.title, Video.comments FROM Video;")
+    elif selected_query == "Videos with the highest number of likes and their corresponding channel names":
+        query_result = execute_query("SELECT Video.title, Channel.channel_name, Video.likes FROM Video JOIN Channel ON Video.channel_id = Channel.channel_id ORDER BY Video.likes DESC LIMIT 1;")
+    elif selected_query == "Total likes and dislikes for each video and their corresponding video names":
+        query_result = execute_query("SELECT Video.title, Video.likes, Video.dislikes FROM Video;")
+    elif selected_query == "Total views for each channel and their corresponding channel names":
+        query_result = execute_query("SELECT Channel.channel_name, SUM(Video.views) AS total_views FROM Video JOIN Channel ON Video.channel_id = Channel.channel_id GROUP BY Channel.channel_name;")
+    elif selected_query == "Channels that published videos in 2022":
+        query_result = execute_query("SELECT DISTINCT channel_name FROM Channel WHERE channel_id IN (SELECT DISTINCT channel_id FROM Video WHERE strftime('%Y', Video.published_at) = '2022');")
+    elif selected_query == "Average duration of videos in each channel":
+        query_result = execute_query("SELECT Channel.channel_name, AVG(Video.duration) AS avg_duration FROM Video JOIN Channel ON Video.channel_id = Channel.channel_id GROUP BY Channel.channel_name;")
+    elif selected_query == "Videos with the highest number of comments and their corresponding channel names":
+        query_result = execute_query("SELECT Video.title, Channel.channel_name, Video.comments FROM Video JOIN Channel ON Video.channel_id = Channel.channel_id ORDER BY Video.comments DESC LIMIT 1;")
+
+    # Display the results as a table
+    if selected_query:
+        st.write(pd.DataFrame(query_result, columns=[col[0] for col in cursor.description]))
+
+# Call the SQL query section element
+sql_query_section()
+Now, the SQL query section is encapsulated within the sql_query_section function, making your code more modular and organized. When you run the Streamlit app, you'll see a separate element for SQL queries while keeping the rest of your application code clean.
+
+
+
+
+
+
 
 
 
