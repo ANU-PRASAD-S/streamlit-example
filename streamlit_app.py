@@ -6,6 +6,9 @@ import re
 import urllib.parse
 import pandas as pd
 import sqlite3
+import pymongo
+import pyodbc 
+
 
 
 # Set up the API client
@@ -175,8 +178,122 @@ Now, the SQL query section is encapsulated within the sql_query_section function
 
 
 
+# Replace the following MongoDB URI with your own
+mongo_uri = "mongodb+srv://anuprasad4444:1234567890@cluster0.nw9dkpu.mongodb.net/"
+
+# Connect to MongoDB using the provided URI
+client = pymongo.MongoClient(mongo_uri)
+
+# Access a specific database
+db = client.my_database  # Replace 'my_database' with your database name
+
+# Define the JSON document containing your data
+data = {
+    "channels": [
+        {
+            "channel_name": "Channel 1",
+            "channel_type": "Type 1",
+            "channel_views": 10000,
+            "channel_description": "Description 1",
+            "channel_status": "Active"
+        },
+        {
+            "channel_name": "Channel 2",
+            "channel_type": "Type 2",
+            "channel_views": 20000,
+            "channel_description": "Description 2",
+            "channel_status": "Inactive"
+        }
+    ],
+    "videos": [
+        {
+            "video_id": "Video 1",
+            "playlist_id": "Playlist 1",
+            "video_name": "Video Name 1",
+            "video_description": "Video Description 1",
+            "published_date": "2023-09-27",
+            "view_count": 5000,
+            "like_count": 1000,
+            "dislike_count": 100,
+            "favorite_count": 500,
+            "comment_count": 300,
+            "duration": "00:05:30",
+            "thumbnail": "thumbnail_url_1",
+            "caption_status": "Enabled"
+        },
+        {
+            "video_id": "Video 2",
+            "playlist_id": "Playlist 2",
+            "video_name": "Video Name 2",
+            "video_description": "Video Description 2",
+            "published_date": "2023-09-28",
+            "view_count": 6000,
+            "like_count": 1200,
+            "dislike_count": 150,
+            "favorite_count": 600,
+            "comment_count": 350,
+            "duration": "00:04:45",
+            "thumbnail": "thumbnail_url_2",
+            "caption_status": "Disabled"
+        }
+    ],
+    "playlists": [
+        {
+            "playlist_id": "Playlist 1",
+            "channel_id": "Channel 1",
+            "playlist_name": "Playlist Name 1"
+        },
+        {
+            "playlist_id": "Playlist 2",
+            "channel_id": "Channel 2",
+            "playlist_name": "Playlist Name 2"
+        }
+    ]
+}
+
+# Insert the JSON document into the MongoDB collection
+collection = db.my_collection  # Replace 'my_collection' with your collection name
+collection.insert_one(data)
+
+# Close the MongoDB connection
+client.close()
 
 
+
+# SQL Server connection parameters
+sql_server = "localhost"
+sql_database = "mysql_database"
+sql_username = "anuprasad"
+sql_password = "1234567890"
+
+# Connect to SQL Server
+conn = pyodbc.connect(f"DRIVER={{SQL Server}};SERVER={sql_server};DATABASE={sql_database};UID={sql_username};PWD={sql_password}")
+cursor = conn.cursor()
+
+# Define the data to be saved
+data = (
+    "video_id_value",
+    "playlist_id_value",
+    "video_name_value",
+    "video_description_value",
+    "2023-09-27",
+    1000,  # view_count
+    500,  # like_count
+    50,  # dislike_count
+    200,  # favorite_count
+    300,  # comment_count
+    "00:05:30",  # duration
+    "thumbnail_url",
+    "caption_status_value"
+)
+
+# SQL Insert statement
+insert_query = "INSERT INTO videos (video_id, playlist_id, video_name, video_description, published_date, view_count, like_count, dislike_count, favorite_count, comment_count, duration, thumbnail, caption_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+cursor.execute(insert_query, data)
+conn.commit()
+
+# Close the SQL connection
+conn.close()
 
 
 
