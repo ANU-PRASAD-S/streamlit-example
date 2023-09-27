@@ -48,7 +48,7 @@ if channel_url:
                 maxResults=50,  # Adjust the number of results per page as needed
                 pageToken=next_page_token
             ).execute()
-#########################################################################################
+
              # Loop through the items in the API response and extract relevant information
             for item in response['items']:
                 video_info = {
@@ -102,8 +102,6 @@ if channel_url:
         channels_collection.insert_one(channel_info)
 
         st.success(f"Data saved to MongoDB.")
-
-#########################################################################################
            
         # Save the video data to a CSV file with the generated filename
         with open(filename, 'w', newline='', encoding='utf-8') as csv_file:
@@ -115,7 +113,7 @@ if channel_url:
                 writer.writerow(video)
 
         st.success(f"Data saved to '{filename}'.")
-
+#########################################################################################
 
 
 
