@@ -174,7 +174,8 @@ def sql_query_section():
 
 # Call the SQL query section element
 sql_query_section()
-Now, the SQL query section is encapsulated within the sql_query_section function, making your code more modular and organized. When you run the Streamlit app, you'll see a separate element for SQL queries while keeping the rest of your application code clean.
+#Now, the SQL query section is encapsulated within the sql_query_section function, making your code more modular and organized.
+#When you run the Streamlit app, you'll see a separate element for SQL queries while keeping the rest of your application code clean.
 
 
 
